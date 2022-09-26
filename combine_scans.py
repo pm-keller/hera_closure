@@ -1,3 +1,13 @@
+""" 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
+Combine all scans to one file.
+
+"""
+
+
 import sys
 
 sys.path.append("/users/pkeller/code/H1C_IDR3.2/")

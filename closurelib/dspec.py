@@ -1,5 +1,10 @@
 """ 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
 Modules for computing delay spectra
+
 """
 
 import numpy as np
@@ -73,9 +78,17 @@ def xps_mat(v1, v2, fs):
 
     return mat
 
-"""
 # Noise only
-def xps_err(v, fs):
+def xps_noise_err(v, fs):
+    """Compute uncertainties of cross power spectrum without the noise-foreground cross-terms.
+    
+    Args:
+        v (ndarray): first axis must contain four independent samples of data which are used for differencing
+        fs (float): sampling frequency
+    
+    Returns:
+        ndarray: cross power spectrum uncertainties
+    """
     # Compute differences
     dv = (v[np.newaxis, :] - v[:, np.newaxis]) / 2
 
@@ -86,11 +99,10 @@ def xps_err(v, fs):
     # Compute cross-power spectrum for each pair of independent closure phase differences
     dv_xps = np.array([xps_mat(dv[i, 0], dv[i, 1], fs) for i in range(3)])
     return dv_xps
-"""
 
 # Noise + Signal-Noise cross-terms
 def xps_err(v, fs):
-    """Compute uncertainties for cross power spectrum
+    """Compute uncertainties of cross power spectrum
     
     Args:
         v (ndarray): first axis must contain four independent samples of data which are used for differencing
@@ -117,10 +129,10 @@ def ftoz(fobs, fem=f_HI):
     return (fem - fobs) / fobs
 
 def get_delays(n, fs=10.24*u.MHz**-1):
-        """
-        Get delay array
-        """
-        return np.fft.fftshift(np.fft.fftfreq(n, 1 / fs))
+    """
+    Get delay array
+    """
+    return np.fft.fftshift(np.fft.fftfreq(n, 1 / fs))
 
 def get_k_parallel(delay, freq, cosmo=Planck18):
     """

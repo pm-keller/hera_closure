@@ -1,5 +1,10 @@
 """ 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
 Modules for plotting closure phase data
+
 """
 
 import numpy as np
@@ -45,40 +50,6 @@ def spectrogram(data, lst, frq, ax=None, return_im=False, **kwargs):
         return ax
 
 
-def triad_jd_metric(metric, trlist, jdlist, ax=None, **kwargs):
-    """ 
-    Plot triad-JD metric. First axis of metric must contain polarisations (dim=2).
-    """
-    if isinstance(ax, NoneType):
-        fig, ax = plt.subplots(1, 2, sharey=True, figsize=(24, 20))
-
-    im1 = ax[0].imshow(metric[0], aspect="auto", interpolation="None", cmap="bone", vmin=0, vmax=1)
-    im2 = ax[1].imshow(metric[1], aspect="auto", interpolation="None", cmap="bone", vmin=0, vmax=1)
-
-    ax[0].set_xlabel("Triad", fontsize=18)
-    ax[1].set_xlabel("Triad", fontsize=18)
-    ax[0].set_ylabel("JD", fontsize=18)
-    ax[0].set_yticklabels(jdlist, fontsize=6)
-    ax[0].set_xticklabels(trlist, fontsize=8, rotation=90)
-    ax[1].set_xticklabels(trlist, fontsize=8, rotation=90)
-    ax[0].set_title("Polarisation XX", fontsize=18)
-    ax[1].set_title("Polarisation YY", fontsize=18)
-
-    plt.setp(ax, 
-            xticks=np.arange(0, len(trlist), 1.0),
-            yticks=np.arange(0, len(jdlist), 1.0),
-            )
-
-    plt.tight_layout()
-
-    fig.subplots_adjust(right=0.9)
-    cbar_ax = fig.add_axes([0.91, 0.18, 0.02, 0.75])
-    cbar = fig.colorbar(im2, cax=cbar_ax)
-    cbar.ax.set_title(r"$z$", fontsize=30)
-    cbar.ax.tick_params(labelsize=18)
-
-    return ax
-
 def bar(ax, x, y, yerr, colour="k"):
     """Plot a box error bar
 
@@ -96,14 +67,15 @@ def bar(ax, x, y, yerr, colour="k"):
     for i in range(len(yerr)):
         ax.add_patch(Rectangle(coord[:, i], width, height[i], alpha=0.1, color=colour))
 
-def xps_plot(power, error, freq, fs=10.24*u.MHz**-1, nsig=1, bls=None, linthresh=1e-4, onesided=False, cosmo=False, tau_ax=False, ax=None):
+
+def xps_plot(power, error, freq, fs=10.24*u.MHz**-1, nsig=1, bls=None, linthresh=1e-4, color="k", onesided=False, cosmo=False, tau_ax=False, ax=None):
     """
     Plot a closure phase delay power-spectrum
     """
     # get delays
     delay = dspec.get_delays(power.shape[-1], fs=fs)
 
-    # average in k// bins
+    # average in |k//|-bins
     if onesided:
         idx = np.where(delay >= 0)[0]
         delay = (delay - np.flip(delay))[idx] / 2
@@ -128,12 +100,12 @@ def xps_plot(power, error, freq, fs=10.24*u.MHz**-1, nsig=1, bls=None, linthresh
         k = np.sqrt(k**2 + k_perp**2)
         power *= k**3 / (2 * np.pi**2)
 
-        ax.scatter(k, power.real, marker="o", s=50, color="k", label="Positive",)
+        ax.scatter(k, power.real, marker="o", s=50, color=color, label="Positive",)
 
     else:
         # plot power
-        ax.scatter(k, power.real, marker="o", s=50, color="k", label="Real",)
-        ax.scatter(k, power.imag, marker="o", s=50, c="None", edgecolor="grey", label="Imaginary")
+        ax.scatter(k, power.real, marker="o", s=50, color=color, label="Real",)
+        ax.scatter(k, power.imag, marker="o", s=50, c="None", edgecolor=color, alpha=0.5, label="Imaginary")
 
     if not isinstance(error, NoneType):
         rms = np.sqrt(np.mean(error.real[idx]**2))
@@ -173,7 +145,7 @@ def xps_plot(power, error, freq, fs=10.24*u.MHz**-1, nsig=1, bls=None, linthresh
         dax.set_xticklabels([])
 
     # yscale
-    ax.set_yscale("symlog", linthreshy=linthresh)
+    ax.set_yscale("symlog", linthresh=linthresh)
 
     # ticks, grid and layout
     plt.tight_layout()
@@ -181,4 +153,4 @@ def xps_plot(power, error, freq, fs=10.24*u.MHz**-1, nsig=1, bls=None, linthresh
     dax.minorticks_on()
     ax.grid(linestyle="--", alpha=0.5)
 
-    return ax
+    return ax, rms

@@ -1,5 +1,6 @@
 # Bojan Nikolic <b.nikolic@mrao.cam.ac.uk> 2016,2017,2018 (as part of
 # "heracasa" package), 2020 (as part of "closureps2")
+
 """
 Closure quantities from visibility data
 """
@@ -125,7 +126,6 @@ def closurePh(f, time, trlist=None):
     a2 = f["Header/ant_2_array"][i1:i2]
 
     ants = f["Header/antenna_numbers"]
-    antlist = numpy.unique(numpy.reshape(trlist, -1))
 
     if trlist is not None:
         rows, tr, signs = triadsList(a1, a2, trlist)
@@ -201,7 +201,6 @@ def bispec(f, time, trlist=None):
     a2 = f["Header/ant_2_array"][i1:i2]
     
     ants = f["Header/antenna_numbers"]
-    antlist = numpy.unique(numpy.reshape(trlist, -1))
 
     if trlist is not None:
         rows, tr, signs = triadsList(a1, a2, trlist)

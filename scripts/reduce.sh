@@ -10,9 +10,9 @@
 
 pythonpath="/lustre/aoc/projects/hera/pkeller/anaconda3/bin/python3"
 
-for trclass in EQ14
+for trclass in EQ14 EQ28
 do 
-    for field in A 
+    for field in A B C D E
     do
         inpath="/lustre/aoc/projects/hera/pkeller/data/H1C_IDR3.2/sample/${trclass}_F${field}.h5"
         outpath="/lustre/aoc/projects/hera/pkeller/data/H1C_IDR3.2/sample/${trclass}_F${field}_B2.h5"

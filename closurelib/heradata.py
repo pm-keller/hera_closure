@@ -1,12 +1,14 @@
 # Bojan Nikolic <b.nikolic@mrao.cam.ac.uk> 2020
-# Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021
+# Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+
 """
 Handling of HERA datasets in uvh5 and similar format
 """
 
 import numpy
-import h5py
 import pandas
+import h5py
+import glob
 import shutil
 import os
 import re
@@ -30,6 +32,7 @@ def jd_to_lst(jd, lat=-30.72138329631366, lon=21.428305555555557):
     Returns:
         float: local sidereal time
     """
+
     t = Time(jd, format="jd", location=(lon, lat))
 
     return t.sidereal_time("apparent").to_value()
@@ -44,6 +47,7 @@ def LSTgrid(lstdata):
     Returns:
         array: LST grid
     """
+
     if lstdata["start"] < lstdata["stop"]:
         grid = numpy.arange(lstdata["start"], lstdata["stop"], lstdata["delta"])
     else:
@@ -60,11 +64,12 @@ def filesToJD(fnames, unique=True):
 
     Args:
         fnames (list or str): file name or list of file names
-        unique (bool): if Ture, return a unique and sorted list of julian days
+        unique (bool): if True, return a unique and sorted list of julian days
 
     Returns:
         list: sorted list of julian days
     """
+
     if type(fnames) is str:
         jd = re.findall(r"\d+", fnames)[0]
     else:
@@ -74,6 +79,24 @@ def filesToJD(fnames, unique=True):
         return numpy.sort(numpy.unique(jd)).tolist()
     else:
         return jd
+    
+
+def filesToLST(fnames):
+    """Extract local sideral times from a list of file names of LST-binned data
+
+    Args:
+        fnames (list or str): file name or list of file names
+
+    Returns:
+        list: sorted list of local sidereal times
+    """
+
+    if type(fnames) is str:
+        lst = float(re.findall(r"\d+\.\d+", fnames)[0])
+    else:
+        lst = [float(re.findall(r"\d+\.\d+", fname)[0]) for fname in fnames]
+
+    return numpy.array(lst) * 12 / numpy.pi
 
 
 def frqFromFile(fpath):
@@ -85,11 +108,47 @@ def frqFromFile(fpath):
     Returns:
         array: frequencies
     """
+
     with h5py.File(fpath, "r") as fin:
         frq = fin["Header/frequency_array"][()]
 
     return frq
+
+
+def getDataLST(root, ant1, ant2, lst, filename="*"):
+    """Get LST-binned visibility data, given two antennas and an LST
     
+    Args:
+        root (str): path to LST-binned data
+        ant1 (int): antenna number 1
+        ant2 (int): antenna number 2
+        lst (float): local sidereal time
+        filename (str): filenames to search for
+        
+    Returns:
+        numpy array: LST-binned visibilities of two antennas at the given LST.
+    """
+    
+    # get file names
+    fnames = numpy.array(glob.glob(root + "/" + filename))
+    
+    # find file containing LST
+    lst_list = numpy.array(filesToLST(fnames))
+    idx = numpy.where((lst_list - lst) <= 0)[0]
+    fname = fnames[idx][numpy.argmax(lst_list[idx])]
+        
+    # read data 
+    uv = UVData()
+    uv.read(fname)
+    uv_data = uv.get_data(ant1, ant2)
+    
+    
+    lst_array = numpy.unique(uv.lst_array * 12 / numpy.pi)
+    idx = numpy.argmin(numpy.abs(lst_array - lst))
+    
+    return uv_data[idx]
+
+
 def scanTimeLib(jdrange, lstrange, outdir, namematch="zen.%.xx.HH.uv", jdex=[]):
     """Scan librarian for data files of a given JD and LST range and extract metadata
 
@@ -106,6 +165,7 @@ def scanTimeLib(jdrange, lstrange, outdir, namematch="zen.%.xx.HH.uv", jdex=[]):
     Returns:
         DataFrame: metadata
     """
+
     fname = []
     jd = []
     lsts = []
@@ -176,6 +236,7 @@ def nearestTimeF(fnameout, *args):
     Args:
         fnameout (str): path to npz file
     """
+
     fg, lstg, jdaxis, lstaxis = nearestTime(*args)
     numpy.savez(fnameout, fnameg=fg, lstg=lstg, jdaxis=jdaxis, lstaxis=lstaxis)
 
@@ -191,6 +252,7 @@ def prepClosureDS(timesnpz, trlist, fnameout, qname="phase"):
         fnameout (str): path to HDF5 file
         qname (str): name of closure quantity
     """
+
     f = numpy.load(timesnpz)
 
     with h5py.File(fnameout, "w") as fout:
@@ -220,6 +282,7 @@ def mkh5(fname, stagedir):
     success, fpathxx = librarian.stageFile(fxx, stagedir)
     success, fpathyy = librarian.stageFile(fyy, stagedir)
     
+    # set XX polarisation product to East-West
     uv = UVData()
     uv.read([fpathxx, fpathyy], axis="polarization")
     uv.x_orientation = 'east'
@@ -228,6 +291,7 @@ def mkh5(fname, stagedir):
     
     shutil.rmtree(fpathxx)
     shutil.rmtree(fpathyy)
+
 
 def addClosureDS(timesnpz, outdir, fnameout, trlist, jdi, lsti):
     """Fill in closure quantity information for JD index jdi and lst index lsti
@@ -270,6 +334,7 @@ def addBispecDS(timesnpz, outdir, fnameout, trlist, jdi, lsti):
         jdi (int): JD index
         lsti (int): LST index
     """
+
     f = numpy.load(timesnpz)
 
     stagedir = os.path.join(outdir, "tmp")
@@ -293,6 +358,7 @@ def addTrList(fnameout, trlist):
     """
     Insert triad information
     """
+
     with h5py.File(fnameout, "a") as fout:
         fout["triads"]=numpy.array(trlist)
         
@@ -305,6 +371,7 @@ def prllSubset(fnamein, fnameout, qname="phase"):
         fnameout (str): path to wirte new data to
         qname (str): name of closure quantity
     """
+
     fin = h5py.File(fnamein, "r")
 
     with h5py.File(fnameout, "w") as fout:
@@ -322,6 +389,7 @@ def visFormat(fnamein, fnameout, qname="phase"):
         fnameout (str): path to wirte new data to
         qname (str): name of closure quantity
     """
+
     fin = h5py.File(fnamein, "r")
 
     with h5py.File(fnameout, "w") as fout:

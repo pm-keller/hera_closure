@@ -5,8 +5,13 @@
 #SBATCH -o align.out
 #SBATCH -l walltime=1:00:00
 
-"""
+""" 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
 LST alignment
+
 """
 
 import sys
@@ -14,7 +19,6 @@ sys.path.append("/users/pkeller/code/H1C_IDR3.2/")
 
 import os
 import pandas
-import numpy as np
 from closurelib import heradata
 
 

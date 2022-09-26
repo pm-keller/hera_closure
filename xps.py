@@ -1,14 +1,12 @@
-#!/lustre/aoc/projects/hera/pkeller/anaconda3/bin/python
-#SBATCH -p hera
-#SBATCH -J xps
-#SBATCH --mem-per-cpu=32G
-#SBATCH --mail-type=ALL
-#SBATCH -o xps.out
-#SBATCH -t 1:00:00
+""" 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
+Compute cross-spectral densities
 
 """
-Compute cross-spectral densities
-"""
+
 
 import h5py
 import numpy as np
@@ -17,12 +15,16 @@ import astropy.units as u
 
 from closurelib import dspec
 
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--inpath", help="Path to closure data.", type=str)
 parser.add_argument("-o", "--outpath", help="Path to write cross-power spectra to.", type=str)
 parser.add_argument("-s", "--scalingpath", help="File with scaling coefficients", type=str)
 parser.add_argument("--fs", help="sampling frequency", type=float, default=10.24*1e-6)
 parser.add_argument("-m", "--model", help="use model data.", action="store_true")
+parser.add_argument("--fcut_low", help="Number of channels to cut from lower end of band.", type=int, default=0)
+parser.add_argument("--fcut_high", help="Number of channels to cut from upper end of band.", type=int, default=0)
+
 args = parser.parse_args()
 
 if args.model:
@@ -34,45 +36,24 @@ else:
 with h5py.File(args.inpath, "r") as f:
     frq = f["FRQ"][()]
     lst = f["LST"][()]
-    eicp1_xx = f[f"eicp XX (2){ifmodel}"][()]
-    eicp2_xx = f[f"eicp XX (4){ifmodel}"][()]
-    eicp1_yy = f[f"eicp YY (2){ifmodel}"][()]
-    eicp2_yy = f[f"eicp YY (4){ifmodel}"][()]
+
+    N = len(frq)
+    frq = frq[:N//2]
+
+    # trim band
+    if args.fcut_high == 0:
+        args.fcut_high = -N
+    eicp1_xx = f[f"eicp XX (2){ifmodel}"][()][..., args.fcut_low:-args.fcut_high]
+    eicp2_xx = f[f"eicp XX (4){ifmodel}"][()][..., args.fcut_low:-args.fcut_high]
+    eicp1_yy = f[f"eicp YY (2){ifmodel}"][()][..., args.fcut_low:-args.fcut_high]
+    eicp2_yy = f[f"eicp YY (4){ifmodel}"][()][..., args.fcut_low:-args.fcut_high]
     trlist_xx = f["triads XX"][()]
     trlist_yy = f["triads YY"][()]
-
+    
 # load scaling coefficients
 scaling_array = np.loadtxt(args.scalingpath)
 
-"""
-# flag NaN-triads
-tr_flags_xx = np.isnan(eicp2_xx).any(axis=(0, 2, 3))
-eicp1_xx = eicp1_xx[:, ~tr_flags_xx]
-eicp2_xx = eicp2_xx[:, ~tr_flags_xx]
-
-tr_flags_yy = np.isnan(eicp2_yy).any(axis=(0, 2, 3))
-eicp1_yy = eicp1_yy[:, ~tr_flags_yy]
-eicp2_yy = eicp2_yy[:, ~tr_flags_yy]
-
-# flag galactic plane
-glx_flags = (lst > 6.25) & (lst < 10.75)
-eicp1_xx = eicp1_xx[:, :, ~glx_flags]
-eicp1_yy = eicp1_yy[:, :, ~glx_flags]
-eicp2_xx = eicp2_xx[:, :, ~glx_flags]
-eicp2_yy = eicp2_yy[:, :, ~glx_flags]
-
-if args.model:
-    scaling_array = scaling_array[~glx_flags]
-"""
-
-# apply scaling
-for i, A in enumerate(scaling_array):
-    eicp1_xx[:, :, i] *= np.sqrt(A[0])
-    eicp1_yy[:, :, i] *= np.sqrt(A[1])
-    eicp2_xx[:, :, i] *= np.sqrt(A[0])
-    eicp2_yy[:, :, i] *= np.sqrt(A[1])
-
-# compute noise realisation
+# compute noise realisations
 noise_xx = (eicp1_xx[1] - eicp1_xx[0]) / np.sqrt(2)
 noise_yy = (eicp1_yy[1] - eicp1_yy[0]) / np.sqrt(2)
 
@@ -83,6 +64,9 @@ var_yy = np.nanvar(noise_yy, axis=-1)
 # inverse variance weights
 w_var_xx = 1 / np.moveaxis([np.outer(var_xx[:, i], var_xx[:, i]) for i in range(var_xx.shape[1])], 0, -1)
 w_var_yy = 1 / np.moveaxis([np.outer(var_yy[:, i], var_yy[:, i]) for i in range(var_yy.shape[1])], 0, -1)
+
+w_var_xx[np.where(np.isinf(w_var_xx))] = np.nan
+w_var_yy[np.where(np.isinf(w_var_yy))] = np.nan
 
 w_cross_xx = w_var_xx.copy()
 w_cross_yy = w_var_yy.copy()
@@ -125,10 +109,9 @@ err_yy_avg = np.sqrt(np.mean(noise_yy_avg.real**2, axis=1))
 delay = dspec.get_delays(n=xps_avg.shape[-1], fs=args.fs/u.MHz)
 
 # downsample (::2) and write to file
-
 dnames = ["LST", "delay", f"XPS XX{ifmodel}", f"XPS YY{ifmodel}", f"ERR XX{ifmodel}", f"ERR YY{ifmodel}", f"XPS XX AVG{ifmodel}", f"XPS YY AVG{ifmodel}", f"ERR XX AVG{ifmodel}", 
-f"ERR YY AVG{ifmodel}", f"Noise XX AVG{ifmodel}", f"Noise YY AVG{ifmodel}", f"XPS AVG{ifmodel}", f"ERR AVG{ifmodel}", f"Noise AVG{ifmodel}", "weights var XX", 
-"weights var YY", "weights cross XX", "weights cross YY", f"scaling{ifmodel}"]
+f"ERR YY AVG{ifmodel}", f"Noise XX AVG{ifmodel}", f"Noise YY AVG{ifmodel}", f"XPS AVG{ifmodel}", f"ERR AVG{ifmodel}", f"Noise AVG{ifmodel}", f"weights var XX{ifmodel}", 
+f"weights var YY{ifmodel}", f"weights cross XX{ifmodel}", f"weights cross YY{ifmodel}", f"scaling{ifmodel}"]
 
 data_list = [lst, delay[..., ::2], xps_xx[..., ::2], xps_yy[..., ::2], noise_xx[::2], noise_yy[::2], xps_xx_avg[..., ::2], xps_yy_avg[..., ::2], err_xx_avg[..., ::2], err_yy_avg[..., ::2], noise_xx_avg[::2], noise_yy_avg[::2],
 xps_avg[..., ::2], err_avg[..., ::2], noise_avg[::2], w_var_xx, w_var_yy, w_cross_xx, w_cross_yy, scaling_array]

@@ -5,6 +5,15 @@
 #SBATCH -o scantimes.out
 #SBATCH -l walltime=48:00:00
 
+""" 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
+Scan all visibility files and save metadata to file.
+
+"""
+
 import sys
 
 sys.path.append("/users/pkeller/code/H1C_IDR3.2/")

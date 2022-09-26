@@ -1,5 +1,10 @@
 """ 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
 Tools for working with the HERA-librarian
+
 """
 
 import os

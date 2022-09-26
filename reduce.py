@@ -1,7 +1,11 @@
-"""
-Initial Data Reduction
-"""
+""" 
 
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
+Initial Data Reduction
+
+"""
 
 import os
 import h5py

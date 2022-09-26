@@ -1,5 +1,10 @@
-"""
+""" 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
 Generate a list of antennas which can be used for the analysis of a field
+
 """
 
 import sys

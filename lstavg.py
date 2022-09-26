@@ -1,8 +1,12 @@
-"""
+""" 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
 LST averaging
+
 """
 
-import os
 import h5py
 import numpy as np
 import argparse
@@ -11,8 +15,12 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--inpath", help="Path to closure data.", type=str)
 parser.add_argument("-o", "--outpath", help="Path to write averaged data to.", type=str)
+parser.add_argument("-s", "--scalingpath", help="File with scaling coefficients", type=str)
+parser.add_argument("-v", "--veffpath", help="File with effective visibilities", type=str)
 parser.add_argument("-n", help="Number of neighbouring LST's to average", type=int)
-parser.add_argument("-m", "--model", help="use model data.", action="store_true")
+parser.add_argument("-m", "--model", help="Use model data.", action="store_true")
+parser.add_argument("-f", "--flags", help="Apply LST flags.", type=str, default="None")
+
 args = parser.parse_args()
 
 if args.model:
@@ -25,15 +33,38 @@ with h5py.File(args.inpath, "r") as f:
     jd = f["JD"][()]
     lst = f["LST"][()]
     frq = f["FRQ"][()]
-    trflags_xx = f["triad flags XX"][()]
-    trflags_yy = f["triad flags YY"][()]
-    trlist_xx = f["triads XX"][()][~trflags_xx]
-    trlist_yy = f["triads YY"][()][~trflags_yy]
-    eicp1_xx = f[f"eicp jdmed (2) XX{ifmodel}"][()][:, ~trflags_xx]
-    eicp2_xx = f[f"eicp jdmed (4) XX{ifmodel}"][()][:, ~trflags_xx]
-    eicp1_yy = f[f"eicp jdmed (2) YY{ifmodel}"][()][:, ~trflags_yy]
-    eicp2_yy = f[f"eicp jdmed (4) YY{ifmodel}"][()][:, ~trflags_yy]
+    trlist_xx = f["triads XX"][()]
+    trlist_yy = f["triads YY"][()]
+    eicp1_xx = f[f"eicp jdmed (2) XX{ifmodel}"][()]
+    eicp2_xx = f[f"eicp jdmed (4) XX{ifmodel}"][()]
+    eicp1_yy = f[f"eicp jdmed (2) YY{ifmodel}"][()]
+    eicp2_yy = f[f"eicp jdmed (4) YY{ifmodel}"][()]    
 
+# load scaling coefficients
+scaling_array = np.loadtxt(args.scalingpath)
+
+# flag Veff > 5
+if not args.model:
+    veff = np.loadtxt(args.veffpath)
+    idx = np.where(veff < 5)
+    print(len(idx[1]), len(veff.T))
+    scaling_array[idx] *= np.nan
+
+# manual flags
+if args.flags != "None":
+    lst_flags = np.atleast_2d(np.loadtxt(args.flags))
+
+    for lst_range in lst_flags:
+        lst_min, lst_max = lst_range
+        idx = np.where((lst > lst_min) & (lst < lst_max))
+        print(len(idx[0]), scaling_array.shape[1])
+        scaling_array[:, idx] *= np.nan
+
+for i, A in enumerate(scaling_array.T):
+    eicp1_xx[:, :, i] *= np.sqrt(A[0])
+    eicp1_yy[:, :, i] *= np.sqrt(A[1])
+    eicp2_xx[:, :, i] *= np.sqrt(A[0])
+    eicp2_yy[:, :, i] *= np.sqrt(A[1])
 
 # number of averaged LST integrations
 Nlst = len(lst) // args.n

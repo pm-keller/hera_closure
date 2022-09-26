@@ -1,5 +1,10 @@
-"""
+""" 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
 Averaging over JD's
+
 """
 
 import numpy as np
@@ -28,7 +33,8 @@ for pol, polname in zip(range(2), ["XX", "YY"]):
         trlist = f["triads"][()]
         bispec = f[f"bispec{ifmodel}"][pol]
         flags_jd_lst = f["JD-LST flags"][()]
-        flags_jd_tr = f["JD-triad flags"][pol]
+        flags_jd_tr = f["JD-triad flags 2"][()]
+        nanflags = np.isnan(f["bispec"][pol])
 
     Nlst = len(lst)
 
@@ -41,6 +47,7 @@ for pol, polname in zip(range(2), ["XX", "YY"]):
     idx2 = np.where(flags_jd_tr)
     eicp[idx1[0], :, idx1[1]] = np.nan
     eicp[idx2] = np.nan
+    eicp[nanflags] = np.nan
     eicp, jdidx = cp.remove_nan_slices(eicp, axis=0, return_index=True)
     eicp, tridx = cp.remove_nan_slices(eicp, axis=1, return_index=True)
     jd = jd[jdidx]

@@ -1,5 +1,10 @@
 """ 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
 Compute geometric median of complex closure phase over triads
+
 """
 
 
@@ -13,6 +18,7 @@ from closurelib import cptools as cp
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-p", "--path", help="Path to closure data.", type=str)
+parser.add_argument("-a", help="Retain amplitudes when averaging.", action="store_true", default=False)
 args = parser.parse_args()
 
 # load bispectrum data
@@ -21,25 +27,30 @@ with h5py.File(args.path, "r") as f:
     bispec = f["bispec"][()]
     Nlst = len(lst)
 
-# complex exponential of closure phase
-eicp = np.exp(1j * np.angle(bispec))
-del bispec
+if not args.a:
+    # complex exponential of closure phase
+    dname = "eicp trmed"
+    data = np.exp(1j * np.angle(bispec))
+    del bispec
+else:
+    dname = "bispec trmed"
+    data = bispec.copy()
+    del bispec
 
-shape = eicp.shape[:2] + eicp.shape[3:]
+shape = data.shape[:2] + data.shape[3:]
 
 # geometric median over triads
 def geomed(idx):
-    return cp.geomed(eicp[:, :, :, idx], axis=2)
+    return cp.geomed(data[:, :, :, idx], axis=2)
 
 
-with Pool(processes=16) as pool:
-    meicp = pool.map(geomed, np.arange(Nlst))
-meicp = np.moveaxis(meicp, 0, 2)
+with Pool(processes=8) as pool:
+    mdata = pool.map(geomed, np.arange(Nlst))
+mdata = np.moveaxis(mdata, 0, 2)
 
 # write to HDF5 file
 f = h5py.File(args.path, "a")
-dname = "eicp trmed"
 if dname in f.keys():
     del f[dname]
-f.create_dataset(dname, data=meicp)
+f.create_dataset(dname, data=mdata)
 f.close()

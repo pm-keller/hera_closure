@@ -7,6 +7,14 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user pmk46@cam.ac.uk
 
+""" 
+
+Pascal M. Keller <pmk46@mrao.cam.ac.uk> 2021/22
+Cavendish Astrophysics, University of Cambridge, UK
+
+Make closure phase or bispectrum data sets.
+
+"""
 
 import sys
 
@@ -18,8 +26,6 @@ import pandas
 import numpy as np
 from closurelib import heradata
 from closurelib import triads
-
-### META-DATA ###
 
 # time delta [s]
 delta = 10.7668166 / 3600
@@ -36,7 +42,7 @@ triad_list = ["EQ14", "EQ28"]
 
 # select triad class and HERA field
 triad = triad_list[1]
-lstdata = lstdata_list[4]
+lstdata = lstdata_list[2]
 
 # generate a name
 name = f"{triad}_{lstdata['name']}"
