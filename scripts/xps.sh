@@ -16,8 +16,8 @@ do
         echo $trclass $field
         inpath="/lustre/aoc/projects/hera/pkeller/data/H1C_IDR3.2/sample/${trclass}_F${field}_B2_AVG.h5"
         outpath="/lustre/aoc/projects/hera/pkeller/data/H1C_IDR3.2/sample/${trclass}_F${field}_B2_XPS_2.h5"
-        scaling="/users/pkeller/code/H1C_IDR3.2/data/scaling_${trclass}_F${field}B2_model.dat"
-        "${pythonpath}" xps.py -i "${inpath}" -o "${outpath}" -s "${scaling}" --fcut_low 85 -m
+        scaling="/users/pkeller/code/H1C_IDR3.2/data/scaling_${trclass}_F${field}B2.dat"
+        "${pythonpath}" xps.py -i "${inpath}" -o "${outpath}" -s "${scaling}" --fcut_low 85
     done
 done
 
